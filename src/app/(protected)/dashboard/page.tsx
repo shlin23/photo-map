@@ -6,9 +6,9 @@ export const metadata: Metadata = { title: "控制台" };
 export default function DashboardPage() {
   return (
     <section aria-labelledby="dashboard-title">
-      <p className="eyebrow">控制台空殼</p>
+      <p className="eyebrow">控制台</p>
       <h1 id="dashboard-title">你的照片地圖入口</h1>
-      <p className="lead">登入與照片數量摘要會在後續階段加入。</p>
+      <p className="lead">登入已完成；照片數量摘要會在上傳功能完成後加入。</p>
       <div className="card-grid">
         <article className="card">
           <h2>上傳照片</h2>

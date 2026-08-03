@@ -204,15 +204,130 @@ h2 {
   border-radius: 1rem;
 }
 
-.map-placeholder {
+.map-state {
   display: grid;
   min-height: 50vh;
   margin-top: 2rem;
+  padding: 1.5rem;
   place-items: center;
+  align-content: center;
+  gap: 1rem;
+  text-align: center;
   color: var(--muted);
-  background: repeating-linear-gradient(45deg, #e8eeeb, #e8eeeb 12px, #f4f7f5 12px, #f4f7f5 24px);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 1rem;
+}
+
+.photo-map-shell {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  margin-top: 1.5rem;
+}
+
+.photo-map {
+  width: 100%;
+  height: min(65vh, 42rem);
+  min-height: 28rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+}
+
+.map-error {
+  position: absolute;
+  z-index: 2;
+  top: 0.75rem;
+  left: 50%;
+  width: min(calc(100% - 6rem), 28rem);
+  margin: 0;
+  padding: 0.75rem;
+  color: #7f1d1d;
+  text-align: center;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  transform: translateX(-50%);
+}
+
+.photo-marker {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  cursor: pointer;
+  background: var(--accent);
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 30%);
+}
+
+.photo-marker::after {
+  display: block;
+  width: 10px;
+  height: 10px;
+  margin: auto;
+  content: "";
+  background: #ffffff;
+  border-radius: 50%;
+}
+
+.photo-marker:focus-visible {
+  outline: 3px solid #111827;
+  outline-offset: 3px;
+}
+
+.photo-popup img {
+  display: block;
+  width: min(100%, 360px);
+  height: auto;
+  border-radius: 0.5rem;
+}
+
+.photo-popup p {
+  margin: 0.5rem 0 0;
+}
+
+.maplibregl-ctrl button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.upload-form {
+  display: grid;
+  gap: 1rem;
+  max-width: 44rem;
+  margin-top: 2rem;
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+}
+
+.upload-form input[type="file"] {
+  min-height: 44px;
+  max-width: 100%;
+}
+
+.upload-results {
+  display: grid;
+  gap: 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.upload-results li {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+.upload-results img {
+  display: block;
+  width: min(100%, 360px);
+  height: auto;
+  margin-top: 0.75rem;
+  border-radius: 0.5rem;
 }
 
 @media (min-width: 48rem) {

@@ -157,7 +157,7 @@ storage/
 - MVP允許JPEG與HEIC/HEIF；若目前runtime無法安全解碼某HEIC，該檔應個別失敗並顯示原因，不可讓整批500。
 - 拒絕SVG與非影像檔。
 - 使用`sharp`預設的input safety limits，不可設定`unlimited: true`。
-- thumbnail最長邊限制為640px，輸出JPEG，且不複製原始EXIF metadata。
+- thumbnail寬度上限為360px，高度依原始比例縮放，輸出JPEG，且不複製原始EXIF metadata。
 - 限制單次最多10檔、每檔15 MiB，並保留日後加rate limit的位置。
 - API與log不可輸出OAuth token、secret、完整session或不必要的GPS資料。
 

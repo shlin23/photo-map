@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { MobileNavigation } from "@/components/mobile-navigation";
 
 import "./globals.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 export const metadata: Metadata = {
   title: {

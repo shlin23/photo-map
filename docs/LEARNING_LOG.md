@@ -23,3 +23,27 @@
 3. 隱藏連結不是授權。受保護 layout 必須在 server render 前檢查 `session.user.id`。
 
 Google Cloud Console、真實 credential 與 consent 畫面由學習者親自操作；Phase 2 才開始照片上傳。
+
+## Phase 2：照片上傳、EXIF與private thumbnail
+
+本階段建立多檔上傳、內容驗證、EXIF抽取、原圖private storage、去metadata thumbnail與owner-only讀取API。
+
+應理解的三個概念：
+
+1. Browser傳來的檔名與MIME都不可信；server必須檢查限制、檔案signature並實際解碼。
+2. Authentication只證明「是誰」，ownership query才證明「這張照片屬於他」。讀取thumbnail時兩者缺一不可。
+3. 檔案系統與database是兩套狀態；任一後段步驟失敗，都必須清理本次已寫入的檔案，避免orphan data。
+
+下一階段才會把有GPS的照片顯示在MapLibre地圖；真實iPhone HEIC／HEIF與GPS照片仍需人工驗收。
+
+## Phase 3：Owner-only照片地圖
+
+本階段建立安全map metadata API、MapLibre Client Component、OpenFreeMap style、marker popup與三種viewport策略。
+
+應理解的三個概念：
+
+1. 地圖API仍是隱私邊界：database query必須先用session user ID過濾，不能把所有GPS送到browser再過濾。
+2. MapLibre需要browser DOM，因此放在Client Component；認證、ownership與資料縮減仍留在server。
+3. 地圖定位使用`[longitude, latitude]`，與平常口語的「緯度、經度」順序相反。
+
+下一階段才加入Playwright與390×844自動化回歸；真實OpenFreeMap網路、手機GPS照片與跨使用者隔離仍需browser人工驗收。

@@ -1,11 +1,12 @@
 import { signIn, signOut } from "@/auth";
+import { withBasePath } from "@/lib/app-path";
 
 export function SignInButton() {
   return (
     <form
       action={async () => {
         "use server";
-        await signIn("google", { redirectTo: "/dashboard" });
+        await signIn("google", { redirectTo: withBasePath("/dashboard") });
       }}
     >
       <button className="primary-link auth-button" type="submit">
@@ -20,7 +21,7 @@ export function SignOutButton() {
     <form
       action={async () => {
         "use server";
-        await signOut({ redirectTo: "/" });
+        await signOut({ redirectTo: withBasePath("/") });
       }}
     >
       <button className="secondary-link auth-button" type="submit">

@@ -7,6 +7,7 @@ vi.mock("@/lib/db/prisma", () => ({
 }));
 
 import { listMappablePhotos, toMapPhoto } from "@/lib/photos/map-photos";
+import { withBasePath } from "@/lib/app-path";
 
 describe("地圖照片查詢", () => {
   beforeEach(() => database.findMany.mockReset());
@@ -43,7 +44,7 @@ describe("地圖照片查詢", () => {
       latitude: 25.033,
       longitude: 121.5654,
       takenAt: "2026-08-03T12:00:00.000Z",
-      thumbnailUrl: "/api/photos/photo-1/thumbnail",
+      thumbnailUrl: withBasePath("/api/photos/photo-1/thumbnail"),
     }]);
     expect(JSON.stringify(photos)).not.toMatch(/relativePath|storedName|originalName|userId/);
   });

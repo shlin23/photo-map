@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Image from "next/image";
 
+import { withBasePath } from "@/lib/app-path";
 import { MAX_FILES_PER_UPLOAD } from "@/lib/photos/constants";
 import type { UploadFileResult, UploadResponse } from "@/types/photo-api";
 
@@ -26,7 +27,7 @@ export function PhotoUploadForm() {
     files.forEach((file) => formData.append("photos", file));
 
     try {
-      const response = await fetch("/api/photos", { method: "POST", body: formData });
+      const response = await fetch(withBasePath("/api/photos"), { method: "POST", body: formData });
       const payload = (await response.json()) as UploadResponse | { message?: string };
       if (!response.ok || !("results" in payload)) {
         throw new Error("message" in payload ? payload.message : "上傳失敗。");
@@ -67,7 +68,7 @@ export function PhotoUploadForm() {
               <strong>{result.originalName}</strong>：{result.message}
               {result.status !== "failed" && result.status !== "partial" && (
                 <Image
-                  src={`/api/photos/${result.photoId}/thumbnail`}
+                  src={withBasePath(`/api/photos/${result.photoId}/thumbnail`)}
                   alt={`${result.originalName} 的縮圖`}
                   width={360}
                   height={360}

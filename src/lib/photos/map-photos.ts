@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { withBasePath } from "@/lib/app-path";
 import { normalizeCoordinate } from "@/lib/photos/validation";
 import type { MapPhoto } from "@/types/photo-api";
 
@@ -40,6 +41,6 @@ export function toMapPhoto(record: MapPhotoRecord): MapPhoto[] {
     latitude,
     longitude,
     takenAt: record.takenAt?.toISOString() ?? null,
-    thumbnailUrl: record.thumbnailPath ? `/api/photos/${record.id}/thumbnail` : null,
+    thumbnailUrl: record.thumbnailPath ? withBasePath(`/api/photos/${record.id}/thumbnail`) : null,
   }];
 }

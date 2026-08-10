@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 
+import { withBasePath } from "@/lib/app-path";
 import { formatCoordinate, formatTakenAt, getMapViewport } from "@/lib/map/map-view";
 import type { MapPhoto, MapPhotosResponse } from "@/types/photo-api";
 
@@ -23,7 +24,7 @@ export function PhotoMap() {
 
     async function loadPhotos() {
       try {
-        const response = await fetch("/api/photos", { signal: controller.signal });
+        const response = await fetch(withBasePath("/api/photos"), { signal: controller.signal });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json() as MapPhotosResponse;
         setPhotos(data.photos);
@@ -43,13 +44,21 @@ export function PhotoMap() {
 
     const viewport = getMapViewport(photos);
     const firstPhoto = photos[0];
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: process.env.NEXT_PUBLIC_MAP_STYLE_URL || DEFAULT_STYLE_URL,
-      center: [firstPhoto.longitude, firstPhoto.latitude],
-      zoom: viewport.kind === "single" ? viewport.zoom : 2,
-      attributionControl: false,
-    });
+    let map: maplibregl.Map;
+    try {
+      map = new maplibregl.Map({
+        container: containerRef.current,
+        style: process.env.NEXT_PUBLIC_MAP_STYLE_URL || DEFAULT_STYLE_URL,
+        center: [firstPhoto.longitude, firstPhoto.latitude],
+        zoom: viewport.kind === "single" ? viewport.zoom : 2,
+        attributionControl: false,
+      });
+    } catch {
+      queueMicrotask(() => {
+        setMapError("WebGL 地圖初始化失敗。請在本機瀏覽器啟用硬體加速，或透過 SSH tunnel 開啟 localhost 後重試。");
+      });
+      return;
+    }
     mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl(), "top-right");
     map.addControl(new maplibregl.AttributionControl({

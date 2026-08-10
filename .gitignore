@@ -12,7 +12,7 @@ coverage/
 !.env.example
 
 # Local photo storage and databases
-storage/
+/storage/
 *.db
 *.db-journal
 *.db-wal

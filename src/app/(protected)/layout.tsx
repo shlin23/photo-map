@@ -15,9 +15,9 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
 
   return (
     <>
-      <aside className="session-bar" aria-label="登入狀態">
+      <aside className="session-bar" aria-label="Account status">
         <p>
-          已登入：<strong>{user.email ?? "Google 使用者"}</strong>
+          Signed in as <strong>{user.email ?? "Google user"}</strong>
         </p>
         <SignOutButton />
       </aside>

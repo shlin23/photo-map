@@ -56,7 +56,8 @@ model Photo {
   id            String   @id @default(uuid())
   userId        String
   originalName  String
-  storedName    String   @unique
+  storedName    String
+  contentHash   String?
   mimeType      String
   sizeBytes     Int
   relativePath  String
@@ -69,4 +70,6 @@ model Photo {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@unique([userId, contentHash])
+  @@unique([userId, storedName])
 }

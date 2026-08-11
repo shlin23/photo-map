@@ -9,7 +9,7 @@ import type { MapPhotosResponse, UploadResponse } from "@/types/photo-api";
 
 export async function GET() {
   const user = getAuthenticatedUser(await auth());
-  if (!user) return NextResponse.json({ message: "請先登入。" }, { status: 401 });
+  if (!user) return NextResponse.json({ message: "Sign in to continue." }, { status: 401 });
 
   const photos = await listMappablePhotos(user.id);
   return NextResponse.json<MapPhotosResponse>({ photos });
@@ -17,25 +17,25 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const user = getAuthenticatedUser(await auth());
-  if (!user) return NextResponse.json({ message: "請先登入。" }, { status: 401 });
+  if (!user) return NextResponse.json({ message: "Sign in to continue." }, { status: 401 });
 
   let formData: FormData;
   try {
     formData = await request.formData();
   } catch {
-    return NextResponse.json({ message: "上傳格式無法解析，請重新選擇照片。" }, { status: 400 });
+    return NextResponse.json({ message: "The upload could not be read. Select your photos again." }, { status: 400 });
   }
 
   const photoFields = formData.getAll("photos");
   if (photoFields.some((value) => !(value instanceof File))) {
-    return NextResponse.json({ message: "上傳欄位必須全部是照片檔案。" }, { status: 400 });
+    return NextResponse.json({ message: "Every uploaded item must be a photo file." }, { status: 400 });
   }
   const files = photoFields as File[];
   try {
     validateBatchCount(files.length);
   } catch (error) {
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : "照片數量不正確。" },
+      { message: error instanceof Error ? error.message : "Select between 1 and 10 photos." },
       { status: 400 },
     );
   }

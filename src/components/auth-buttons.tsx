@@ -10,7 +10,7 @@ export function SignInButton() {
       }}
     >
       <button className="primary-link auth-button" type="submit">
-        使用 Google 帳號登入
+        Sign in with Google
       </button>
     </form>
   );
@@ -25,7 +25,7 @@ export function SignOutButton() {
       }}
     >
       <button className="secondary-link auth-button" type="submit">
-        登出
+        Sign out
       </button>
     </form>
   );

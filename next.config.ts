@@ -4,6 +4,7 @@ import { APP_BASE_PATH } from "./src/lib/app-path";
 
 const nextConfig: NextConfig = {
   basePath: APP_BASE_PATH,
+  serverExternalPackages: ["exifr"],
 };
 
 export default nextConfig;

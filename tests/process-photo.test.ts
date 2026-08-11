@@ -6,10 +6,10 @@ import { File } from "node:buffer";
 import sharp from "sharp";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const database = vi.hoisted(() => ({ create: vi.fn() }));
+const database = vi.hoisted(() => ({ create: vi.fn(), findFirst: vi.fn() }));
 
 vi.mock("@/lib/db/prisma", () => ({
-  prisma: { photo: { create: database.create } },
+  prisma: { photo: { create: database.create, findFirst: database.findFirst } },
 }));
 
 import { processPhoto } from "../src/lib/photos/process-photo";
@@ -21,6 +21,8 @@ describe("單張照片處理", () => {
     uploadRoot = await mkdtemp(join(tmpdir(), "photo-map-upload-"));
     process.env.UPLOAD_ROOT = uploadRoot;
     database.create.mockReset();
+    database.findFirst.mockReset();
+    database.findFirst.mockResolvedValue(null);
     database.create.mockImplementation(async ({ data }: { data: { id: string } }) => ({ id: data.id }));
   });
 
@@ -42,13 +44,20 @@ describe("單張照片處理", () => {
     expect(result.status).toBe("no_gps");
     expect(result.originalName).toBe("teaching-photo.jpg");
     expect(database.create).toHaveBeenCalledOnce();
-    const thumbnails = await readdir(join(uploadRoot, "thumbnails", "test-user_123"));
+    const userDirectories = await readdir(join(uploadRoot, "thumbnails"));
+    expect(userDirectories).toHaveLength(1);
+    expect(userDirectories[0]).toMatch(/^[0-9a-f]{32}$/);
+    const thumbnails = await readdir(join(uploadRoot, "thumbnails", userDirectories[0]));
+    expect(thumbnails[0]).toMatch(/^[0-9a-f]{32}\.jpg$/);
     expect(thumbnails).toHaveLength(1);
-    const metadata = await sharp(await readFile(join(uploadRoot, "thumbnails", "test-user_123", thumbnails[0]))).metadata();
+    const metadata = await sharp(await readFile(join(uploadRoot, "thumbnails", userDirectories[0], thumbnails[0]))).metadata();
     expect(metadata.format).toBe("jpeg");
     expect(metadata.width).toBe(360);
     expect(metadata.height).toBe(240);
     expect(metadata.exif).toBeUndefined();
+    expect(database.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ contentHash: expect.stringMatching(/^[0-9a-f]{32}$/) }),
+    }));
   });
 
   it("database失敗時清除本次檔案", async () => {
@@ -63,7 +72,23 @@ describe("單張照片處理", () => {
     const result = await processPhoto(file, "test-user_123");
 
     expect(result.status).toBe("failed");
-    expect(await readdir(join(uploadRoot, "uploads", "test-user_123"))).toHaveLength(0);
-    expect(await readdir(join(uploadRoot, "thumbnails", "test-user_123"))).toHaveLength(0);
+    const uploadUsers = await readdir(join(uploadRoot, "uploads"));
+    const thumbnailUsers = await readdir(join(uploadRoot, "thumbnails"));
+    expect(await readdir(join(uploadRoot, "uploads", uploadUsers[0]))).toHaveLength(0);
+    expect(await readdir(join(uploadRoot, "thumbnails", thumbnailUsers[0]))).toHaveLength(0);
+  });
+
+  it("returns a duplicate result without writing files", async () => {
+    database.findFirst.mockResolvedValueOnce({ id: "existing-photo" });
+    const jpeg = await sharp({
+      create: { width: 4, height: 4, channels: 3, background: "white" },
+    }).jpeg().toBuffer();
+
+    const file = new File([jpeg], "duplicate.jpg", { type: "image/jpeg" }) as unknown as globalThis.File;
+    const result = await processPhoto(file, "test-user_123");
+
+    expect(result).toMatchObject({ status: "duplicate", photoId: "existing-photo" });
+    expect(database.create).not.toHaveBeenCalled();
+    expect(await readdir(uploadRoot)).toHaveLength(0);
   });
 });

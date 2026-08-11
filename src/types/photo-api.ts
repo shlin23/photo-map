@@ -1,7 +1,7 @@
 export type UploadFileResult =
   | {
       originalName: string;
-      status: "success" | "no_gps" | "partial";
+      status: "success" | "no_gps" | "partial" | "duplicate";
       photoId: string;
       message: string;
     }

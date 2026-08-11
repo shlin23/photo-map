@@ -23,14 +23,14 @@ export class UploadValidationError extends Error {
 }
 
 export function validateBatchCount(count: number) {
-  if (count < 1) throw new Error("請至少選擇一張照片。");
-  if (count > MAX_FILES_PER_UPLOAD) throw new Error(`每次最多上傳 ${MAX_FILES_PER_UPLOAD} 張照片。`);
+  if (count < 1) throw new Error("Select at least one photo.");
+  if (count > MAX_FILES_PER_UPLOAD) throw new Error(`You can upload up to ${MAX_FILES_PER_UPLOAD} photos at a time.`);
 }
 
 export function validateFileSize(size: number) {
-  if (size < 1) throw new UploadValidationError("invalid_image", "檔案是空的，請重新選擇照片。");
+  if (size < 1) throw new UploadValidationError("invalid_image", "This file is empty. Select a different photo.");
   if (size > MAX_FILE_SIZE_BYTES) {
-    throw new UploadValidationError("too_large", "檔案超過 15 MiB，請縮小後重新上傳。");
+    throw new UploadValidationError("too_large", "This photo is larger than 15 MiB. Choose a smaller file.");
   }
 }
 
@@ -44,7 +44,7 @@ export function detectImageType(buffer: Uint8Array): DetectedImageType {
     if (HEIF_BRANDS.has(brand)) return "heif";
   }
 
-  throw new UploadValidationError("unsupported_type", "只接受 JPEG、HEIC 或 HEIF 照片。");
+  throw new UploadValidationError("unsupported_type", "Only JPEG, HEIC, and HEIF photos are supported.");
 }
 
 export function getValidatedType(type: DetectedImageType) {

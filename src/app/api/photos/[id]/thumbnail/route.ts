@@ -9,7 +9,7 @@ import { resolveStoragePath } from "@/lib/storage/photo-paths";
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   const user = getAuthenticatedUser(await auth());
-  if (!user) return NextResponse.json({ message: "請先登入。" }, { status: 401 });
+  if (!user) return NextResponse.json({ message: "Sign in to continue." }, { status: 401 });
 
   const { id } = await context.params;
   const photo = await prisma.photo.findFirst({
@@ -33,5 +33,5 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
 }
 
 function notFound() {
-  return NextResponse.json({ message: "找不到縮圖。" }, { status: 404 });
+  return NextResponse.json({ message: "Thumbnail not found." }, { status: 404 });
 }

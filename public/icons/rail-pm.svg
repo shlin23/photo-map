@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">RAIL PM</title>
+  <desc id="desc">A railway entering a photo map pin</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#176b52"/>
+      <stop offset="1" stop-color="#0d4f3b"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#background)"/>
+  <path d="M256 74c-91 0-165 70-165 157 0 116 165 224 165 224s165-108 165-224c0-87-74-157-165-157Z" fill="#fff"/>
+  <circle cx="256" cy="229" r="104" fill="#dff4ec"/>
+  <path d="M184 162h144c14 0 26 12 26 26v94c0 18-14 32-32 32H190c-18 0-32-14-32-32v-94c0-14 12-26 26-26Z" fill="#176b52"/>
+  <path d="M186 190h140v61H186Z" fill="#fff"/>
+  <circle cx="203" cy="280" r="13" fill="#fff"/>
+  <circle cx="309" cy="280" r="13" fill="#fff"/>
+  <path d="m197 314-31 70M315 314l31 70M210 337h92M190 372h132" fill="none" stroke="#176b52" stroke-width="15" stroke-linecap="round"/>
+  <text x="256" y="123" fill="#0d4f3b" font-family="Arial, sans-serif" font-size="37" font-weight="800" text-anchor="middle" letter-spacing="3">RAIL</text>
+  <text x="256" y="430" fill="#0d4f3b" font-family="Arial, sans-serif" font-size="42" font-weight="800" text-anchor="middle" letter-spacing="5">PM</text>
+</svg>

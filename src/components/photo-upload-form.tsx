@@ -1,41 +1,44 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import Image from "next/image";
 
 import { withBasePath } from "@/lib/app-path";
 import { MAX_FILES_PER_UPLOAD } from "@/lib/photos/constants";
-import type { UploadFileResult, UploadResponse } from "@/types/photo-api";
+import { readUploadResponse } from "@/lib/photos/upload-response";
+import { getUploadSelectionState } from "@/lib/photos/upload-selection";
+import type { UploadFileResult } from "@/types/photo-api";
 
 export function PhotoUploadForm() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [results, setResults] = useState<UploadFileResult[]>([]);
   const [message, setMessage] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const uploadSelection = getUploadSelectionState(files.length, isUploading);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (files.length < 1 || files.length > MAX_FILES_PER_UPLOAD) {
-      setMessage(`請選擇 1–${MAX_FILES_PER_UPLOAD} 張照片。`);
+      setMessage(`Select 1–${MAX_FILES_PER_UPLOAD} photos.`);
       return;
     }
 
     setIsUploading(true);
-    setMessage("正在安全處理照片，請勿重複送出。");
+    setMessage("Uploading and processing your photos…");
     setResults([]);
     const formData = new FormData();
     files.forEach((file) => formData.append("photos", file));
 
     try {
       const response = await fetch(withBasePath("/api/photos"), { method: "POST", body: formData });
-      const payload = (await response.json()) as UploadResponse | { message?: string };
-      if (!response.ok || !("results" in payload)) {
-        throw new Error("message" in payload ? payload.message : "上傳失敗。");
-      }
+      const payload = await readUploadResponse(response);
       setResults(payload.results);
-      setMessage("處理完成，請查看每張照片的結果。");
+      setMessage("Upload complete. Review the results below.");
+      setFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "上傳失敗，請稍後重試。");
+      setMessage(error instanceof Error ? error.message : "Upload failed. Please try again.");
     } finally {
       setIsUploading(false);
     }
@@ -43,33 +46,58 @@ export function PhotoUploadForm() {
 
   return (
     <form className="upload-form" onSubmit={handleSubmit}>
-      <label htmlFor="photos">選擇 1–10 張 JPEG、HEIC 或 HEIF</label>
       <input
+        ref={fileInputRef}
+        className="visually-hidden"
         id="photos"
         name="photos"
         type="file"
         multiple
         accept="image/jpeg,image/heic,image/heif,.jpg,.jpeg,.heic,.heif"
         disabled={isUploading}
-        onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
+        onChange={(event) => {
+          const selectedFiles = Array.from(event.target.files ?? []);
+          setFiles(selectedFiles);
+          setResults([]);
+          setMessage(
+            selectedFiles.length > MAX_FILES_PER_UPLOAD
+              ? `You can upload up to ${MAX_FILES_PER_UPLOAD} photos at a time.`
+              : "",
+          );
+        }}
       />
-      <p>已選擇 {files.length} 張；每張上限 15 MiB。Server仍會重新驗證實際內容。</p>
+      <label
+        className="primary-link file-picker-button"
+        htmlFor="photos"
+        aria-disabled={isUploading}
+      >
+        Select Photos
+      </label>
       {files.length > 0 && (
-        <ul>{files.map((file, index) => <li key={`${file.name}-${file.size}-${index}`}>{file.name}</li>)}</ul>
+        <>
+          <p>{files.length} {files.length === 1 ? "photo" : "photos"} selected.</p>
+          <ul>{files.map((file, index) => <li key={`${file.name}-${file.size}-${index}`}>{file.name}</li>)}</ul>
+        </>
       )}
-      <button className="primary-link auth-button" type="submit" disabled={isUploading || files.length === 0}>
-        {isUploading ? "上傳處理中…" : "上傳照片"}
-      </button>
+      {uploadSelection.showUploadButton && (
+        <button
+          className="primary-link auth-button"
+          type="submit"
+          disabled={uploadSelection.disableUploadButton}
+        >
+          {isUploading ? "Uploading…" : "Upload Photos"}
+        </button>
+      )}
       <p role="status" aria-live="polite">{message}</p>
       {results.length > 0 && (
         <ul className="upload-results">
           {results.map((result, index) => (
             <li key={`${result.originalName}-${index}`}>
-              <strong>{result.originalName}</strong>：{result.message}
+              <strong>{result.originalName}</strong>: {result.message}
               {result.status !== "failed" && result.status !== "partial" && (
                 <Image
                   src={withBasePath(`/api/photos/${result.photoId}/thumbnail`)}
-                  alt={`${result.originalName} 的縮圖`}
+                  alt={`Thumbnail of ${result.originalName}`}
                   width={360}
                   height={360}
                   unoptimized

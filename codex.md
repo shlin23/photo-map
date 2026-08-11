@@ -2,7 +2,7 @@
 
 > 狀態：MVP規格  
 > 目標平台：iPhone Safari為優先的responsive web app  
-> 開發環境：Windows 11 + VS Code；建議以WSL2執行Node.js與Codex  
+> 開發與部署環境：Ubuntu + VS Code；IIS ARR提供public HTTPS reverse proxy
 > 文件用途：Codex與Claude Code共用的產品與工程source of truth
 
 ## 1. 專案目標
@@ -20,11 +20,14 @@
 3. 一次上傳1–10張照片，每張上限15 MiB。
 4. Server將原始檔案存入本機持久化資料夾，不存入Git。
 5. Server抽取EXIF的latitude、longitude與拍攝時間。
-6. 無GPS的照片仍可保存，並在Upload結果中清楚標為「無GPS資訊」。
+6. 無GPS的照片仍可保存，並在Upload結果中清楚標為「Photo saved without GPS data.」。
 7. Map只顯示目前登入者自己的地理標記照片。
 8. 點選marker可看到thumbnail、拍攝時間與座標。
 9. 地圖不得使用Google Maps或需要信用卡／用量計費的圖磚服務。
 10. iPhone直向畫面寬度390px時，登入、上傳與地圖均可正常操作。
+11. 同一使用者重複上傳相同file bytes時不得建立第二筆Photo，並顯示duplicate訊息。
+12. 鄰近的map markers依縮放層級聚合，cluster圓圈顯示照片數量。
+13. Public HTTPS site提供installable PWA metadata、RAIL PM icon與iPhone Add to Home Screen指引。
 
 ### 暫不完成
 
@@ -32,7 +35,7 @@
 - 讀取Gmail信件或Google Drive；Google帳號只用於登入。
 - 公開分享地圖、多人協作、社群功能。
 - 照片編輯、相簿、標籤、路線軌跡。
-- 背景上傳、離線上傳、完整offline PWA。
+- 背景上傳與離線照片資料；PWA只快取versioned static assets，不快取session、照片或GPS response。
 - 雲端object storage、CDN、付費地圖服務。
 - AI影像辨識。
 
@@ -62,7 +65,7 @@
 ### 4.1 登入
 
 1. 未登入者進入首頁。
-2. 點選「使用Google帳號登入」。
+2. 點選「Sign in with Google」。
 3. 完成Google OAuth/OIDC。
 4. 登入成功後進入Dashboard。
 5. 應用程式只要求登入所需的`openid email profile`，不要求Gmail內容權限。
@@ -83,6 +86,7 @@
 3. 前端以MapLibre顯示marker。
 4. 地圖初始範圍自動fit到所有marker；若只有一點，使用合理zoom；若沒有點，顯示說明與Upload連結。
 5. 點選marker顯示受保護的thumbnail、拍攝時間與座標。
+6. 點選cluster會放大至可展開該cluster的zoom level。
 
 ## 5. 頁面與UX
 
@@ -98,11 +102,14 @@
 UX規則：
 
 - Mobile-first；先驗證390×844 viewport，再驗證desktop。
+- Release UI的所有user-facing copy使用簡潔、自然、專業英文；不得顯示Phase、placeholder、shell或未完成階段文字。
+- Upload頁初始只提供Select Photos；選擇1–10張後才顯示可用的Upload Photos按鈕，超過10張時顯示錯誤且不可送出。
 - 主要按鈕touch target至少44×44 CSS pixels。
 - 上傳中不可重複送出。
-- 每個錯誤提供下一步，例如「這張照片沒有GPS，可在iPhone相機的定位服務開啟後重新拍攝」。
+- 每個錯誤提供下一步，例如「This photo has no GPS data. Enable Location Services for Camera before taking another photo.」。
 - 不以顏色作為唯一狀態提示。
 - 地圖必須顯示資料來源attribution。
+- PWA cache不得保存authentication response、photo metadata、thumbnail或GPS資料。
 
 ## 6. 資料模型
 
@@ -113,7 +120,8 @@ Photo
 - id: string, UUID
 - userId: string, foreign key -> User
 - originalName: string
-- storedName: string, unique
+- storedName: string, unique per user
+- contentHash: string | null, per-user MD5 duplicate key
 - mimeType: string
 - sizeBytes: integer
 - relativePath: string
@@ -131,21 +139,22 @@ Photo
 - `originalName`只供顯示，不可參與filesystem path。
 - 有效latitude範圍為-90到90；longitude範圍為-180到180。
 - 所有Photo query必須包含目前登入者的`userId`條件。
+- `contentHash`只用於同一使用者的duplicate detection，不可作authentication、authorization或跨使用者查詢。
 
 ## 7. Storage規則
 
 ```text
 storage/
 ├── uploads/
-│   └── <userId>/
-│       └── <uuid>.<validated-extension>
+│   └── <md5-user-id>/
+│       └── <md5-file-bytes>.<validated-extension>
 └── thumbnails/
-    └── <userId>/
-        └── <uuid>.jpg
+    └── <md5-user-id>/
+        └── <md5-file-bytes>.jpg
 ```
 
 - `storage/`、SQLite檔案、`.env.local`必須加入`.gitignore`。
-- 建立路徑時只可使用server產生且已驗證的user ID、UUID與extension。
+- 新上傳路徑只可使用server計算且已驗證的32位lowercase MD5與validated extension；舊UUID路徑為backward compatibility保留。
 - 儲存採先寫temporary file、驗證／處理成功後再atomic rename。
 - 若database寫入失敗，清除本次建立的檔案，避免orphan files。
 - 若thumbnail失敗，可保存原圖並回報部分成功，但不得把原圖直接公開。
@@ -160,6 +169,7 @@ storage/
 - thumbnail寬度上限為360px，高度依原始比例縮放，輸出JPEG，且不複製原始EXIF metadata。
 - 限制單次最多10檔、每檔15 MiB，並保留日後加rate limit的位置。
 - API與log不可輸出OAuth token、secret、完整session或不必要的GPS資料。
+- MD5只作deterministic storage key與duplicate identity；安全邊界仍是session、ownership query與server-side validation。
 
 ## 9. Authentication與隱私
 

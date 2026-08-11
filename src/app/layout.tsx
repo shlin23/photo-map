@@ -1,26 +1,36 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import type { ReactNode } from "react";
 
 import { MobileNavigation } from "@/components/mobile-navigation";
+import { PwaInstallButton } from "@/components/pwa-install-button";
+import { withBasePath } from "@/lib/app-path";
 
 import "./globals.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "照片地圖",
-    template: "%s｜照片地圖",
+    default: "Photo Map",
+    template: "%s | Photo Map",
   },
-  description: "將自己的照片依拍攝位置顯示在地圖上的行動優先網站。",
+  description: "Upload geotagged photos and view where they were taken.",
+  manifest: withBasePath("/manifest.webmanifest"),
+  icons: {
+    icon: withBasePath("/icons/rail-pm.svg"),
+    apple: withBasePath("/icons/rail-pm-apple.png"),
+  },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "RAIL PM" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="zh-Hant">
+    <html lang="en">
       <body>
         <header className="site-header">
           <LinkBrand />
           <MobileNavigation />
+          <PwaInstallButton />
         </header>
         <main className="page-shell">{children}</main>
       </body>
@@ -30,8 +40,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
 
 function LinkBrand() {
   return (
-    <div className="brand" aria-label="照片地圖">
-      Photo Map
+    <div className="brand" aria-label="Photo Map">
+      <Image src={withBasePath("/icons/rail-pm.svg")} alt="" width={42} height={42} priority />
+      <span>RAIL PM</span>
     </div>
   );
 }

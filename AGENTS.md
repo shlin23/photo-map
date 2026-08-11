@@ -30,9 +30,9 @@ Do not hide errors. Explain the likely cause, the evidence, and the smallest nex
 
 For beginner-facing instructions:
 
-- Label every command block with the exact execution environment: Administrator PowerShell, ordinary PowerShell, Ubuntu/WSL, VS Code WSL terminal, or Codex sidebar.
+- Label every command block with the exact execution environment: Administrator PowerShell, ordinary PowerShell, Ubuntu terminal, VS Code terminal, or Codex sidebar.
 - Explain why the command is needed, the expected success signal, and the first safe troubleshooting check.
-- Explain placeholders such as `<WindowsUser>` and state that angle brackets are not typed literally.
+- Explain placeholders such as `<UbuntuUser>` and state that angle brackets are not typed literally.
 - Never assume the learner knows what the current working directory is; use `pwd` and state the expected project path when location matters.
 - Introduce at most 1–3 new concepts per vertical slice, then ask the learner to explain the data flow or safety boundary in their own words.
 - Do not treat copied commands as evidence of learning; require an observable result, test output, or short explanation.
@@ -46,7 +46,7 @@ For beginner-facing instructions:
 - Do not add a runtime dependency outside the approved stack in `codex.md` without explaining why and obtaining approval.
 - Do not change the framework, authentication method, database, storage model, or map provider without approval.
 - Never use destructive Git commands. Do not commit or push unless explicitly asked.
-- Keep user-facing text in Traditional Chinese.
+- Keep user-facing text in clear, natural English suitable for a public release.
 - Add comments only where the reason is not obvious from the code.
 
 ## Required verification

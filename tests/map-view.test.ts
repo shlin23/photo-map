@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatCoordinate, formatTakenAt, getMapViewport } from "@/lib/map/map-view";
+import { createPhotoFeatureCollection, formatCoordinate, formatTakenAt, getMapViewport } from "@/lib/map/map-view";
 import type { MapPhoto } from "@/types/photo-api";
 
 const photo = (id: string, latitude: number, longitude: number): MapPhoto => ({
@@ -27,10 +27,21 @@ describe("地圖viewport與popup格式", () => {
     });
   });
 
+  it("建立只包含photo ID與座標的GeoJSON point", () => {
+    expect(createPhotoFeatureCollection([photo("one", 23.95, 120.93)])).toEqual({
+      type: "FeatureCollection",
+      features: [{
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [120.93, 23.95] },
+        properties: { photoId: "one" },
+      }],
+    });
+  });
+
   it("處理未知時間並將座標顯示至小數點後五位", () => {
-    expect(formatTakenAt(null)).toBe("拍攝時間未知");
-    expect(formatTakenAt("not-a-date")).toBe("拍攝時間未知");
-    expect(formatTakenAt("2026-08-03T12:00:00.000Z", "zh-TW")).not.toBe("拍攝時間未知");
+    expect(formatTakenAt(null)).toBe("Date taken unavailable");
+    expect(formatTakenAt("not-a-date")).toBe("Date taken unavailable");
+    expect(formatTakenAt("2026-08-03T12:00:00.000Z", "en-US")).not.toBe("Date taken unavailable");
     expect(formatCoordinate(25.0331234)).toBe("25.03312");
   });
 });

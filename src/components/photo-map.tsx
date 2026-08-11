@@ -5,7 +5,12 @@ import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 
 import { withBasePath } from "@/lib/app-path";
-import { formatCoordinate, formatTakenAt, getMapViewport } from "@/lib/map/map-view";
+import {
+  createPhotoFeatureCollection,
+  formatCoordinate,
+  formatTakenAt,
+  getMapViewport,
+} from "@/lib/map/map-view";
 import type { MapPhoto, MapPhotosResponse } from "@/types/photo-api";
 
 const DEFAULT_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
@@ -13,7 +18,6 @@ const DEFAULT_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 export function PhotoMap() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
-  const markersRef = useRef<maplibregl.Marker[]>([]);
   const [photos, setPhotos] = useState<MapPhoto[] | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -31,7 +35,7 @@ export function PhotoMap() {
         setRequestError(null);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        setRequestError("無法取得照片位置，請檢查網路後重試。");
+        setRequestError("Could not load photo locations. Check your connection and try again.");
       }
     }
 
@@ -55,7 +59,7 @@ export function PhotoMap() {
       });
     } catch {
       queueMicrotask(() => {
-        setMapError("WebGL 地圖初始化失敗。請在本機瀏覽器啟用硬體加速，或透過 SSH tunnel 開啟 localhost 後重試。");
+        setMapError("The map could not start. Enable hardware acceleration in your browser and try again.");
       });
       return;
     }
@@ -67,27 +71,86 @@ export function PhotoMap() {
     }));
 
     const handleMapError = () => {
-      if (!map.loaded()) setMapError("地圖樣式載入失敗，請檢查網路後重試。");
+      if (!map.loaded()) setMapError("Could not load the map style. Check your connection and try again.");
     };
     map.on("error", handleMapError);
 
-    for (const photo of photos) {
-      const markerButton = document.createElement("button");
-      markerButton.type = "button";
-      markerButton.className = "photo-marker";
-      markerButton.setAttribute(
-        "aria-label",
-        `開啟照片，座標 ${formatCoordinate(photo.latitude)}, ${formatCoordinate(photo.longitude)}`,
-      );
+    const photosById = new Map(photos.map((photo) => [photo.id, photo]));
 
-      const popup = new maplibregl.Popup({ offset: 24, maxWidth: "320px" })
-        .setDOMContent(createPopupContent(photo));
-      const marker = new maplibregl.Marker({ element: markerButton })
+    const handleLoad = () => {
+      map.addSource("photos", {
+        type: "geojson",
+        data: createPhotoFeatureCollection(photos),
+        cluster: true,
+        clusterMaxZoom: 14,
+        clusterRadius: 52,
+      });
+      map.addLayer({
+        id: "photo-clusters",
+        type: "circle",
+        source: "photos",
+        filter: ["has", "point_count"],
+        paint: {
+          "circle-color": ["step", ["get", "point_count"], "#176b52", 10, "#0d4f3b", 50, "#78350f"],
+          "circle-radius": ["step", ["get", "point_count"], 22, 10, 27, 50, 32],
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-width": 3,
+        },
+      });
+      map.addLayer({
+        id: "photo-cluster-count",
+        type: "symbol",
+        source: "photos",
+        filter: ["has", "point_count"],
+        layout: {
+          "text-field": ["get", "point_count_abbreviated"],
+          "text-size": 14,
+        },
+        paint: { "text-color": "#ffffff" },
+      });
+      map.addLayer({
+        id: "unclustered-photos",
+        type: "circle",
+        source: "photos",
+        filter: ["!", ["has", "point_count"]],
+        paint: {
+          "circle-color": "#176b52",
+          "circle-radius": 11,
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-width": 3,
+        },
+      });
+    };
+
+    const handleClusterClick = async (event: maplibregl.MapLayerMouseEvent) => {
+      const feature = event.features?.[0];
+      const clusterId = feature?.properties?.cluster_id;
+      if (typeof clusterId !== "number" || feature?.geometry.type !== "Point") return;
+      const source = map.getSource("photos") as maplibregl.GeoJSONSource;
+      const zoom = await source.getClusterExpansionZoom(clusterId);
+      map.easeTo({ center: feature.geometry.coordinates as [number, number], zoom });
+    };
+
+    const handlePhotoClick = (event: maplibregl.MapLayerMouseEvent) => {
+      const feature = event.features?.[0];
+      const photoId = feature?.properties?.photoId;
+      const photo = typeof photoId === "string" ? photosById.get(photoId) : undefined;
+      if (!photo) return;
+      new maplibregl.Popup({ offset: 18, maxWidth: "320px" })
         .setLngLat([photo.longitude, photo.latitude])
-        .setPopup(popup)
+        .setDOMContent(createPopupContent(photo))
         .addTo(map);
-      markersRef.current.push(marker);
-    }
+    };
+
+    const showPointer = () => { map.getCanvas().style.cursor = "pointer"; };
+    const hidePointer = () => { map.getCanvas().style.cursor = ""; };
+    map.on("load", handleLoad);
+    map.on("click", "photo-clusters", handleClusterClick);
+    map.on("click", "unclustered-photos", handlePhotoClick);
+    map.on("mouseenter", "photo-clusters", showPointer);
+    map.on("mouseleave", "photo-clusters", hidePointer);
+    map.on("mouseenter", "unclustered-photos", showPointer);
+    map.on("mouseleave", "unclustered-photos", hidePointer);
 
     if (viewport.kind === "bounds") {
       map.fitBounds(viewport.bounds, { padding: viewport.padding, maxZoom: viewport.maxZoom });
@@ -95,8 +158,13 @@ export function PhotoMap() {
 
     return () => {
       map.off("error", handleMapError);
-      markersRef.current.forEach((marker) => marker.remove());
-      markersRef.current = [];
+      map.off("load", handleLoad);
+      map.off("click", "photo-clusters", handleClusterClick);
+      map.off("click", "unclustered-photos", handlePhotoClick);
+      map.off("mouseenter", "photo-clusters", showPointer);
+      map.off("mouseleave", "photo-clusters", hidePointer);
+      map.off("mouseenter", "unclustered-photos", showPointer);
+      map.off("mouseleave", "unclustered-photos", hidePointer);
       map.remove();
       mapRef.current = null;
     };
@@ -107,19 +175,19 @@ export function PhotoMap() {
       <div className="map-state" role="alert">
         <p>{requestError}</p>
         <button className="secondary-link" type="button" onClick={() => setRequestNumber((value) => value + 1)}>
-          重新載入
+          Reload
         </button>
       </div>
     );
   }
 
-  if (photos === null) return <div className="map-state" role="status">照片位置載入中…</div>;
+  if (photos === null) return <div className="map-state" role="status">Loading photo locations…</div>;
 
   if (photos.length === 0) {
     return (
       <div className="map-state">
-        <p>尚無含 GPS 資訊的照片。</p>
-        <Link className="primary-link" href="/upload">前往上傳照片</Link>
+        <p>No geotagged photos yet.</p>
+        <Link className="primary-link" href="/upload">Upload Photos</Link>
       </div>
     );
   }
@@ -127,7 +195,7 @@ export function PhotoMap() {
   return (
     <div className="photo-map-shell">
       {mapError && <p className="map-error" role="alert">{mapError}</p>}
-      <div ref={containerRef} className="photo-map" aria-label={`照片地圖，共 ${photos.length} 個標記`} />
+      <div ref={containerRef} className="photo-map" aria-label={`Photo map with ${photos.length} photos`} />
     </div>
   );
 }
@@ -138,11 +206,11 @@ function createPopupContent(photo: MapPhoto) {
 
   if (photo.thumbnailUrl) {
     const fallback = document.createElement("p");
-    fallback.textContent = "縮圖無法載入。";
+    fallback.textContent = "The thumbnail could not be loaded.";
     fallback.hidden = true;
     const image = document.createElement("img");
     image.src = photo.thumbnailUrl;
-    image.alt = "照片縮圖";
+    image.alt = "Photo thumbnail";
     image.width = 360;
     image.addEventListener("error", () => {
       image.hidden = true;
@@ -151,14 +219,14 @@ function createPopupContent(photo: MapPhoto) {
     content.append(image, fallback);
   } else {
     const unavailable = document.createElement("p");
-    unavailable.textContent = "這張照片沒有可用縮圖。";
+    unavailable.textContent = "No thumbnail is available for this photo.";
     content.append(unavailable);
   }
 
   const takenAt = document.createElement("p");
   takenAt.textContent = formatTakenAt(photo.takenAt);
   const coordinates = document.createElement("p");
-  coordinates.textContent = `緯度 ${formatCoordinate(photo.latitude)}、經度 ${formatCoordinate(photo.longitude)}`;
+  coordinates.textContent = `Latitude ${formatCoordinate(photo.latitude)}, longitude ${formatCoordinate(photo.longitude)}`;
   content.append(takenAt, coordinates);
   return content;
 }

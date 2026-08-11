@@ -26,12 +26,26 @@ export function getMapViewport(photos: MapPhoto[]): MapViewport {
 }
 
 export function formatTakenAt(takenAt: string | null, locale?: string) {
-  if (!takenAt) return "拍攝時間未知";
+  if (!takenAt) return "Date taken unavailable";
   const date = new Date(takenAt);
-  if (Number.isNaN(date.getTime())) return "拍攝時間未知";
+  if (Number.isNaN(date.getTime())) return "Date taken unavailable";
   return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
 export function formatCoordinate(value: number) {
   return value.toFixed(5);
+}
+
+export function createPhotoFeatureCollection(photos: MapPhoto[]) {
+  return {
+    type: "FeatureCollection" as const,
+    features: photos.map((photo) => ({
+      type: "Feature" as const,
+      geometry: {
+        type: "Point" as const,
+        coordinates: [photo.longitude, photo.latitude],
+      },
+      properties: { photoId: photo.id },
+    })),
+  };
 }
